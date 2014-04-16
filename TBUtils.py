@@ -1,11 +1,7 @@
-<<<<<<< HEAD
-import sys
-import re 
-=======
 # Created 4/12/2014 B.Hirosky: Initial release
 
 import sys, bz2, inspect, re, time
->>>>>>> 12d17391cd5b05659842f508861deed3ea440956
+
 from commands import getoutput,getstatusoutput
 
 def hit_continue(msg='Hit any key to continue'):
@@ -58,47 +54,9 @@ class Logger():
         print " WARNING Summary (end)"
         print "="*40        
 
-<<<<<<< HEAD
-
-#WC Database lookup
-#Simple, Naive version 
-def wcLookup(unixtime, bound, filename):
-    try:
-        handle = open(filename, 'r')
-        
-        withinBound = []
-        for line in handle:
-            split = re.split(' +', line.strip())
-            eTime = int(float(split[0]))
-            diff = int(unixtime)-eTime
-
-            if abs(diff) < bound: 
-                withinBound.append((eTime, split[3], split[4]))
-            elif split[0] == str(unixtime):
-                return (split[3], int(split[4]))
-            elif (eTime-unixtime) > bound:
-                #Moved past the event in the db file
-                break
-        bestMatch = None 
-        best = 999999
-        for entry in withinBound:
-            # find the closest match, in the case of a tie lowest first wins
-            diff = abs(entry[0]-int(unixtime))
-            if diff < best: 
-                bestMatch = entry
-                best = diff
-
-        return bestMatch
 
 
 
-    except IOError as e:
-        print "Failed to open file %s due to %s" % (filename, e)
-            
-
-    return None 
-
-=======
 def TBOpen(fin):
     if fin.endswith("bz2"): return bz2.BZ2File(fin,"r")
     else: return open(fin,"r")
@@ -208,18 +166,39 @@ def getWCspills(fWC):
 
 
 #WC Database lookup
-def wcLookup(unixtime, filename="wcdb.txt"):
-    if type(unixtime) is float:
-        unixtime = str(unixtime)
+#Simple, Naive version 
+def wcLookup(unixtime, bound, filename):
     try:
         handle = open(filename, 'r')
+        
+        withinBound = []
         for line in handle:
             split = re.split(' +', line.strip())
-            if split[0] == unixtime:
-                print "matched time! spill at byte offset: %s" % split[-1:][0]
+            eTime = int(float(split[0]))
+            diff = int(unixtime)-eTime
+
+            if abs(diff) < bound: 
+                withinBound.append((eTime, split[3], split[4]))
+            elif split[0] == str(unixtime):
                 return (split[3], int(split[4]))
+            elif (eTime-unixtime) > bound:
+                #Moved past the event in the db file
+                break
+        bestMatch = None 
+        best = 999999
+        for entry in withinBound:
+            # find the closest match, in the case of a tie lowest first wins
+            diff = abs(entry[0]-int(unixtime))
+            if diff < best: 
+                bestMatch = entry
+                best = diff
+
+        return bestMatch
+
+
+
     except IOError as e:
         print "Failed to open file %s due to %s" % (filename, e)
             
+
     return None 
->>>>>>> 12d17391cd5b05659842f508861deed3ea440956
