@@ -1,8 +1,10 @@
+// Created 4/12/2014 B.Hirosky: Initial release
 
 #include <iostream>
 #include <stdio.h>
 #include "TTree.h"
 #include "TFile.h"
+#include "TString.h"
 #include "shashlik.h"
 
 #include "TBEvent.h"
@@ -38,9 +40,7 @@ void TBEvent::AddWCHit(UChar_t num, UChar_t wire, UShort_t count){
 
 void TBEvent::cp(const TBEvent &e){
   spillNumber = e.spillNumber;
-  pcTime = e.pcTime;
-  spillTime = e.spillTime;
-  eventNumber = e.eventNumber;
+  nTrigWC = e.nTrigWC;
   padeChannel = e.padeChannel;
   wc = e.wc;
 }
@@ -82,6 +82,18 @@ Int_t PadeChannel::GetModule(){
   return 0;
 }
 Int_t PadeChannel::GetFiber(){return 0;}
+
+void PadeChannel::GetHist(TH1F *h){
+  TString ti;
+  ti.Form("Event %d : Board %d, channel %d",_eventnum, GetBoardID(),GetChannelID());
+  h->Reset();
+  h->SetTitle(ti);
+  h->SetBins(N_PADE_SAMPLES,0,N_PADE_SAMPLES);
+  for (int i=0; i<N_PADE_SAMPLES; i++){
+    h->SetBinContent(i,_wform[i]);
+  }
+}
+
 
 
 void WCChannel::Dump() const {

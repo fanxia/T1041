@@ -5,7 +5,10 @@ import glob
 import os 
 import os.path
 import datetime
+<<<<<<< HEAD
 from operator import itemgetter
+=======
+>>>>>>> 12d17391cd5b05659842f508861deed3ea440956
 import time
 from TBUtils import * 
 logger=Logger(1)  # instantiate a logger, w/ 1 repetition of messages
@@ -113,6 +116,7 @@ if os.path.isfile(location):
 elif os.path.isdir(location): 
     absPath =  os.path.abspath(location)
     joinedPath = os.path.join(absPath, args.x[0])
+<<<<<<< HEAD
     files = glob.glob(joinedPath)
     
     #Generate a list of tuples containing the filename and file modification time 
@@ -123,6 +127,10 @@ elif os.path.isdir(location):
     #Sort the files by the file modification time 
     sortedFiles = sorted(sortedFiles, key=itemgetter(1))
     for filename,mtime in sortedFiles:
+=======
+
+    for filename in glob.glob(joinedPath):
+>>>>>>> 12d17391cd5b05659842f508861deed3ea440956
         if filename.endswith(".bz2"):
             try:
                 wcHandle = bz2.BZ2File(filename, "r")
