@@ -154,6 +154,10 @@ void waveInterface::makeButtons()  {
 
   _buttonFrame->AddFrame(_prevchBN);
 
+  _firstchBN = new TGTextButton(_buttonFrame, "&First Channel");
+
+  _buttonFrame->AddFrame(_firstchBN);
+
   _nextenBN = new TGTextButton(_buttonFrame, "&Next Entry");
  
   _buttonFrame->AddFrame(_nextenBN);
@@ -188,6 +192,7 @@ void waveInterface::connectButtons()  {
 
   _nextchBN->Connect("Clicked()", "waveInterface", this, "nextChannel()"); 
   _prevchBN->Connect("Clicked()", "waveInterface", this, "prevChannel()"); 
+  _firstchBN->Connect("Clicked()", "waveInterface", this, "firstChannel()"); 
 
   _FMain->Connect("CloseWindow()", "waveInterface", this, "closeCleanup()"); 
 
@@ -321,6 +326,11 @@ void waveInterface::loadRootFile() {
 
 }
 
+
+void waveInterface::firstChannel() { 
+  _currentChannel = 0; 
+  updateFrame(_currentEntry, _currentChannel); 
+}
 
 bool waveInterface::nextChannel() { 
   bool finished = true; 

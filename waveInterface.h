@@ -59,6 +59,7 @@ class waveInterface : public TQObject {
 
   TGTextButton *_nextchBN;
   TGTextButton *_prevchBN;
+  TGTextButton *_firstchBN;
   
   
   
@@ -84,6 +85,8 @@ class waveInterface : public TQObject {
   void prevChannel(); 
   bool nextEntry(); 
   void prevEntry(); 
+  void firstChannel(); 
+
 
   void initWindow(UInt_t width=0, UInt_t height=0); 
   void makeButtons(); 
