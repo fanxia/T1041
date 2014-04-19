@@ -48,13 +48,26 @@ const UInt_t spectrumFrameHeight = 500;
 
 
 
+void *timer(void *ptr) { 
+  waveInterface *interface = (waveInterface *) ptr; 
+
+  while(1) { 
+    if (!interface->PlayerStatus())
+      break; 
+
+    interface->nextChannel(); 
+    gSystem->Sleep(1000);  
+  }
+  return 0; 
+}
+
 
 waveInterface::waveInterface(bool initialise) { 
   _f = NULL; 
   _filename = "" ;
   _width = 1000; 
   _height = 500; 
-
+  _playerStatus = false; 
   //By default start the interface
   if (initialise)
     initWindow(); 
@@ -63,7 +76,9 @@ waveInterface::waveInterface(bool initialise) {
 waveInterface::waveInterface(const TString &filename, bool initialise) { 
   _f = NULL; 
   _filename = filename; 
-  
+  _playerStatus = false; 
+
+
   std::cout << "Just starting up" << std::endl; 
   _width = 1000; 
   _height = 500; 
@@ -166,6 +181,8 @@ void waveInterface::connectButtons()  {
   
   std::cout << "Connecting buttons" << std::endl; 
 
+  _goBN->Connect("Clicked()", "waveInterface", this, "Go()"); 
+  _stopBN->Connect("Clicked()", "waveInterface", this, "Stop()"); 
   _nextenBN->Connect("Clicked()", "waveInterface", this, "nextEntry()"); 
   _prevenBN->Connect("Clicked()", "waveInterface", this, "prevEntry()");
 
@@ -216,12 +233,16 @@ void waveInterface::openFileDialog() {
 
 void waveInterface::Go() { 
 
-
+  std::cout << "Starting channel playback..." << std::endl; 
+  _playerStatus = true; 
+  _timer = new TThread("timer", timer, this); 
+  _timer->Run(); 
 
 }
 
 void waveInterface::Stop() { 
-
+  std::cout << "Stopping channel playback..." << std::endl; 
+  _playerStatus = false; 
 
 }
 
@@ -301,13 +322,16 @@ void waveInterface::loadRootFile() {
 }
 
 
-void waveInterface::nextChannel() { 
+bool waveInterface::nextChannel() { 
+  bool finished = true; 
   Int_t maxchans = _event->NPadeChan(); 
-  if (_currentChannel < maxchans) 
+  if (_currentChannel < maxchans) {
     _currentChannel++; 
+    finished = false; 
+  }
 
   updateFrame(_currentEntry, _currentChannel); 
-
+  return finished; 
 }
 
 void waveInterface::prevChannel() { 
@@ -319,17 +343,18 @@ void waveInterface::prevChannel() {
 
 }
 
-void waveInterface::nextEntry() { 
+bool waveInterface::nextEntry() { 
+  bool finished = true; 
   Int_t maxentries = _eventTree->GetEntries(); 
   std::cout << "Current Entry:" << _currentEntry << " of: " << maxentries << std::endl; 
 
-  
-  if (_currentEntry == maxentries)
-    return;
+  if (_currentEntry < maxentries) {
+    _currentEntry++; 
+    finished = false; 
+  }
 
-  _currentEntry++; 
   updateFrame(_currentEntry, _currentChannel); 
-
+  return finished; 
 }
 
 void waveInterface::prevEntry() { 

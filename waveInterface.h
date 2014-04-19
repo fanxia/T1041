@@ -48,7 +48,7 @@ class waveInterface : public TQObject {
   UInt_t _height; 
   Int_t _currentEntry; 
   Int_t _currentChannel; 
-
+  bool _playerStatus; 
 
   //Buttons 
   TGTextButton *_loadBN;
@@ -78,10 +78,11 @@ class waveInterface : public TQObject {
   void closeCleanup(); 
   void Go(); 
   void Stop(); 
+  bool PlayerStatus() { return _playerStatus; } 
 
-  void nextChannel(); 
+  bool nextChannel(); 
   void prevChannel(); 
-  void nextEntry(); 
+  bool nextEntry(); 
   void prevEntry(); 
 
   void initWindow(UInt_t width=0, UInt_t height=0); 
