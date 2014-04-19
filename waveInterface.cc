@@ -34,6 +34,8 @@ using std::vector;
 #include "TRegexp.h"
 #include "TArrayF.h"
 #include "TArrayC.h"
+#include <TGSlider.h>
+
 
 #include "waveInterface.h"
 
@@ -145,26 +147,28 @@ void waveInterface::makeButtons()  {
   _loadBN->SetToolTipText("Select input ROOT file", 2000);
   _buttonFrame->AddFrame(_loadBN); 
 
-  _nextchBN = new TGTextButton(_buttonFrame, "&Next Channel");
-
-  _buttonFrame->AddFrame(_nextchBN);
-
-
-  _prevchBN = new TGTextButton(_buttonFrame, "&Prev Channel");
-
-  _buttonFrame->AddFrame(_prevchBN);
 
   _firstchBN = new TGTextButton(_buttonFrame, "&First Channel");
 
   _buttonFrame->AddFrame(_firstchBN);
 
-  _nextenBN = new TGTextButton(_buttonFrame, "&Next Entry");
- 
-  _buttonFrame->AddFrame(_nextenBN);
+  _prevchBN = new TGTextButton(_buttonFrame, "&Prev Channel");
+
+  _buttonFrame->AddFrame(_prevchBN);
+
+  _nextchBN = new TGTextButton(_buttonFrame, "&Next Channel");
+
+  _buttonFrame->AddFrame(_nextchBN);
+
 
   _prevenBN = new TGTextButton(_buttonFrame, "&Prev Entry");
 
   _buttonFrame->AddFrame(_prevenBN);
+
+  _nextenBN = new TGTextButton(_buttonFrame, "&Next Entry");
+ 
+  _buttonFrame->AddFrame(_nextenBN);
+
 
 
   _goBN = new TGTextButton(_buttonFrame, "&Go");
@@ -172,6 +176,11 @@ void waveInterface::makeButtons()  {
 
   _stopBN = new TGTextButton(_buttonFrame, "&Stop");
   _buttonFrame->AddFrame(_stopBN); 
+
+  //  _slider = new TGHSlider(_buttonFrame, 0, 200, kSlider1 | kScaleBoth, 100); 
+  //  _slider->SetRange(0, 31); 
+  //  _buttonFrame->AddFrame(_slider); 
+
 
   _FMain->AddFrame(_spectrumFrame, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY)); 
   _FMain->AddFrame(_buttonFrame, new TGLayoutHints(kLHintsExpandX)); 

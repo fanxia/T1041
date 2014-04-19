@@ -19,7 +19,7 @@
 #include "TTree.h"
 #include "RQ_OBJECT.h"
 #include "TThread.h"
-
+#include "TGSlider.h"
 #include "TBEvent.h"
 
 
@@ -61,7 +61,9 @@ class waveInterface : public TQObject {
   TGTextButton *_prevchBN;
   TGTextButton *_firstchBN;
   
-  
+  //  TGHSlider *_slider; 
+
+
   
 
 

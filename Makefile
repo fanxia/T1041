@@ -11,6 +11,7 @@ CXXFLAGS=-Wall -fPIC -O2 $(DEBUG) -rdynamic
 waveInterface.so: TBEvent.so waveInterface.o waveEventDict.so 
 	g++ waveInterface.o -shared -Wl,-soname,waveInterface.so $(ROOTLFLAGS) -Wl,--no-undefined -Wl,--as-needed -L$(ROOTLIB) $(ROOTLIBS)  ./waveEventDict.so ./TBEvent.so ./TBEventDict.so $(ROOTLIBS) -o waveInterface.so
 
+
 waveInterface.o: waveInterface.cc
 	g++ -c -pipe -Wshadow -W -Woverloaded-virtual $(ROOTCFLAGS) $(CXXFLAGS) -DR__HAVE_CONFIG waveInterface.cc
 
@@ -31,6 +32,7 @@ waveEventDict.so: waveEventDict.cxx
 	g++ -shared -o waveEventDict.so $(ROOTCFLAGS) $(CXXFLAGS) waveEventDict.cxx
 
 waveEventDict.cxx: waveInterface.h waveLinkDef.h
+	rm -f waveEventDict.cxx waveEventDict.h
 	rootcint waveEventDict.cxx -c waveInterface.h waveLinkDef.h
 
 
