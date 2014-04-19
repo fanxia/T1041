@@ -58,7 +58,7 @@ void *timer(void *ptr) {
       break; 
 
     interface->nextChannel(); 
-    gSystem->Sleep(1000);  
+    gSystem->Sleep(interface->Delay());  
   }
   return 0; 
 }
@@ -177,6 +177,11 @@ void waveInterface::makeButtons()  {
   _stopBN = new TGTextButton(_buttonFrame, "&Stop");
   _buttonFrame->AddFrame(_stopBN); 
 
+
+  _delayBox = new TGNumberEntry(_buttonFrame, 1000,9,999, TGNumberFormat::kNESInteger,
+				TGNumberFormat::kNEANonNegative,TGNumberFormat::kNELLimitMinMax,100,10000);
+  _buttonFrame->AddFrame(_delayBox); 
+
   //  _slider = new TGHSlider(_buttonFrame, 0, 200, kSlider1 | kScaleBoth, 100); 
   //  _slider->SetRange(0, 31); 
   //  _buttonFrame->AddFrame(_slider); 
@@ -202,8 +207,17 @@ void waveInterface::connectButtons()  {
   _nextchBN->Connect("Clicked()", "waveInterface", this, "nextChannel()"); 
   _prevchBN->Connect("Clicked()", "waveInterface", this, "prevChannel()"); 
   _firstchBN->Connect("Clicked()", "waveInterface", this, "firstChannel()"); 
+  _delayBox->Connect("ReturnPressed()", "waveInterface", this, "delayBoxUpdate()"); 
+  _delayBox->Connect("ValueSet(Long_t)", "waveInterface", this, "delayBoxUpdate()"); 
+
 
   _FMain->Connect("CloseWindow()", "waveInterface", this, "closeCleanup()"); 
+
+}
+
+void waveInterface::delayBoxUpdate() { 
+
+  _delay = _delayBox->GetIntNumber(); 
 
 }
 

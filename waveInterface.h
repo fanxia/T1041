@@ -44,6 +44,7 @@ class waveInterface : public TQObject {
   TH1F *_waveform; 
   TThread *_timer; 
 
+  UInt_t _delay; 
   UInt_t _width; 
   UInt_t _height; 
   Int_t _currentEntry; 
@@ -62,7 +63,7 @@ class waveInterface : public TQObject {
   TGTextButton *_firstchBN;
   
   //  TGHSlider *_slider; 
-
+  TGNumberEntry *_delayBox; 
 
   
 
@@ -81,14 +82,18 @@ class waveInterface : public TQObject {
   void closeCleanup(); 
   void Go(); 
   void Stop(); 
-  bool PlayerStatus() { return _playerStatus; } 
 
+  bool PlayerStatus() { return _playerStatus; } 
+  UInt_t Delay() { return _delay; } 
+  
   bool nextChannel(); 
   void prevChannel(); 
   bool nextEntry(); 
   void prevEntry(); 
   void firstChannel(); 
 
+  void setDelay(UInt_t delay) { _delay = delay;  }
+  void delayBoxUpdate();
 
   void initWindow(UInt_t width=0, UInt_t height=0); 
   void makeButtons(); 
