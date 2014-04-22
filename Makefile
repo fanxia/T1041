@@ -54,5 +54,5 @@ waveEventDict.cxx: waveInterface.h waveLinkDef.h
 
 
 clean:
-	rm  -f *.so *.o *~ TBEventDict.cxx TBEventDict.h waveEventDict.cxx waveEventDict.h $(LIB)/*
+	rm  -f *.so *.o *~ TBEventDict.cxx TBEventDict.h waveEventDict.cxx waveEventDict.h $(LIB)/* $(BUILDDIR)/waveInterface.so
 
