@@ -3,7 +3,7 @@
 SHELL=/bin/sh
 .SUFFIXES:
 .SUFFIXES: .cc .cxx .o
-VPATH=src:include:../src:/include:../include:lib
+VPATH=src:include:build:build/lib:../src:/include:../include:lib
 CC = g++
 ROOTLIB=$(shell root-config --libdir)
 ROOTCFLAGS=$(shell root-config --cflags)
@@ -20,9 +20,16 @@ LIB = $(BUILDDIR)/lib
 waveInterface.so: waveEventDict.so TBEvent.so waveInterface.o TBEventDict.so
 	g++ -shared -Wl,-soname,waveInterface.so $(ROOTLFLAGS) -Wl,--no-undefined -Wl,--as-needed -L$(ROOTLIB) $(ROOTLIBS) $(filter-out %.so, $^) $(abspath $(patsubst %.so, $(LIB)/%.so,$(filter %.so, $(notdir $^)))) $(ROOTLIBS) -o waveInterface.so
 	mv $@ $(BUILDDIR)
-	rm -f TBEventDict.cxx TBEventDict.h TBEvent.o waveEventDict.cxx waveEventDict.h waveInterface.o 
 
 
+waveEventDict.so: waveEventDict.cxx 
+	$(CC) $(SHAREDCFLAGS) -I. $^ -o $@
+	test -d $(LIB) || mkdir -p $(LIB)
+	mv $@ $(LIB)/
+
+waveEventDict.cxx: waveInterface.h waveLinkDef.h
+	rm -f ./waveEventDict.cxx ./waveEventDict.h
+	rootcint $@ -c $^
 
 waveInterface.o: waveInterface.cc
 	$(CC) -I$(<D)/../include $(NONSHARED) $^
@@ -43,14 +50,6 @@ TBEventDict.cxx: TBEvent.h LinkDef.h
 	rm -f ./TBEventDict.cxx ./TBEventDict.h
 	rootcint $@ -c $^ 
 
-waveEventDict.so: waveEventDict.cxx 
-	$(CC) $(SHAREDCFLAGS) -I. $^ -o $@
-	test -d $(LIB) || mkdir -p $(LIB)
-	mv $@ $(LIB)/
-
-waveEventDict.cxx: waveInterface.h waveLinkDef.h
-	rm -f ./waveEventDict.cxx ./waveEventDict.h
-	rootcint $@ -c $^
 
 
 clean:

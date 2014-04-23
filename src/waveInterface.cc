@@ -49,6 +49,14 @@ const UInt_t spectrumFrameWidth = 1000;
 const UInt_t spectrumFrameHeight = 500; 
 
 
+BoardMap::BoardMap() { 
+  board = 0; 
+}
+
+BoardMap::BoardMap(UInt_t bid) { 
+  board = bid; 
+}
+
 
 void *timer(void *ptr) { 
   waveInterface *interface = (waveInterface *) ptr; 
@@ -71,6 +79,7 @@ waveInterface::waveInterface(bool initialise) {
   _height = 500; 
   _playerStatus = false; 
   _delay=1000;
+  _currentBoard = -1; 
   //By default start the interface
   if (initialise)
     initWindow(); 
@@ -80,7 +89,7 @@ waveInterface::waveInterface(const TString &filename, bool initialise) {
   _f = NULL; 
   _filename = filename; 
   _playerStatus = false; 
-
+  _currentBoard = -1; 
 
   std::cout << "Just starting up" << std::endl; 
   _width = 1000; 
@@ -109,7 +118,7 @@ void waveInterface::initWindow(UInt_t width, UInt_t height) {
 
   _FMain = new TGMainFrame(gClient->GetRoot(), _width, _height, kVerticalFrame); 
   _FMain->SetWindowName("Test Beam Waveform Viewer v.00000001"); 
-  _buttonFrame = new TGVerticalFrame(_FMain, buttonFrameWidth, buttonFrameHeight, kLHintsRight | kFixedWidth | kFixedHeight); 
+  _buttonFrame = new TGVerticalFrame(_FMain, buttonFrameWidth, buttonFrameHeight, kFixedWidth | kFixedHeight); 
   _spectrumFrame = new TGVerticalFrame(_FMain, spectrumFrameWidth, spectrumFrameHeight, kLHintsLeft | kFixedWidth); 
   _waveformCanvas = new TRootEmbeddedCanvas("waveform", _spectrumFrame, spectrumFrameWidth, spectrumFrameHeight, kSunkenFrame); 
   _spectrumFrame->AddFrame(_waveformCanvas, new TGLayoutHints(kLHintsExpandY, 10,10,10,1)); 
@@ -126,6 +135,89 @@ void waveInterface::initWindow(UInt_t width, UInt_t height) {
 }
 
 
+
+
+void waveInterface::addCheckBoxes() { 
+  std::cout << " Adding Board and channel buttons." << std::endl; 
+  TGRadioButton *brd = NULL; 
+  TGCheckButton *ch = NULL; 
+  TString converter; 
+
+  //Update the board/channel map for the current event
+  _boards.clear(); 
+  buildChannelBoardMap(_event, _boards);
+
+
+  if (_boardFrame != NULL) { 
+    _buttonFrame->RemoveFrame(_boardAndchannelFrame); 
+    delete _boardAndchannelFrame; 
+    _chList.Clear(); 
+    _boardList.Clear(); 
+    
+  }
+  _chList.Expand(32); 
+  _boardList.Expand(4); 
+
+
+  //Build board frame
+  _boardAndchannelFrame = new TGHorizontalFrame(_buttonFrame); 
+
+  _boardFrame = new TGGroupFrame(_boardAndchannelFrame, "Boards", kVerticalFrame); 
+  UInt_t i = 0; 
+  for (i = 0; i < _boards.size(); i++) { 
+    BoardMap *m = _boards[i]; 
+    std::cout << "Board ID:" << m->board << " # Chs: " << m->chs.size() << std::endl; 
+    brd = new TGRadioButton(_boardFrame, TGHotString(converter.Itoa(m->board, 10))); 
+    _boardList.Add(brd); 
+  
+    if (i == 0 && _currentBoard == -1) { 
+      brd->SetState(kButtonDown); 
+      _selected = brd; 
+      _currentBoard = 0; 
+    }
+    else if (m->board == _currentBoard) { 
+      brd->SetState(kButtonDown); 
+      _selected = brd; 
+      _currentBoard = i; 
+    }
+
+    brd->Connect("Clicked()", "waveInterface", this, "updateBoardSelection()"); 
+    _boardFrame->AddFrame(brd, new TGLayoutHints(kLHintsTop,5,5,5,1)); 
+
+  }
+
+
+  _channelFrame = new TGCompositeFrame(_boardAndchannelFrame); 
+
+
+
+
+  _channelFrame->SetLayoutManager(new TGMatrixLayout(_channelFrame, 9, 0, 1)); 
+  
+  UInt_t row = 0; 
+  UInt_t check = 8; 
+  for ( i = 0; i < _boards[0]->chs.size(); i++) { 
+    ch = new TGCheckButton(_channelFrame, TGHotString(converter.Itoa(i, 10))); 
+    _channelFrame->AddFrame(ch); 
+    _chList.Add(ch); 
+    row++; 
+    if (row == check) { 
+      ch = new TGCheckButton(_channelFrame, TGHotString("All")); 
+      _channelFrame->AddFrame(ch); 
+      _chList.Add(ch); 
+      check += 8; 
+    }
+  }
+
+
+  _boardAndchannelFrame->AddFrame(_boardFrame, new TGLayoutHints(kLHintsLeft | kLHintsBottom | kFixedWidth, 5,5,5,1)); 
+  _boardAndchannelFrame->AddFrame(_channelFrame, new TGLayoutHints(kLHintsRight ,5,5,5,1)); 
+  _buttonFrame->AddFrame(_boardAndchannelFrame, new TGLayoutHints(kLHintsExpandX, 5,5,5,1)); 
+  _buttonFrame->MapSubwindows(); 
+  _buttonFrame->Resize(); 
+  
+}
+
 void waveInterface::makeButtons()  {
   std::cout << "Adding buttons to display." << std::endl; 
   ULong_t red;
@@ -140,56 +232,60 @@ void waveInterface::makeButtons()  {
   gClient->GetColorByName("#888888",gray);
   gClient->GetColorByName("white", white);
 
+  _actionFrame = new TGHorizontalFrame(_buttonFrame); 
+
+
   
 
-  _loadBN = new TGTextButton(_buttonFrame, "&Load File");
+  _loadBN = new TGTextButton(_actionFrame, "&Load File");
   _loadBN->SetTextColor(blue);
   _loadBN->Connect("Clicked()", "waveInterface", this, "openFileDialog()");
   _loadBN->SetToolTipText("Select input ROOT file", 2000);
-  _buttonFrame->AddFrame(_loadBN); 
+  _actionFrame->AddFrame(_loadBN, new TGLayoutHints(kLHintsTop,5,5,5,1)); 
 
 
-  _firstchBN = new TGTextButton(_buttonFrame, "&First Channel");
+  _firstchBN = new TGTextButton(_actionFrame, "&First Channel");
 
-  _buttonFrame->AddFrame(_firstchBN);
+  _actionFrame->AddFrame(_firstchBN, new TGLayoutHints(kLHintsTop,5,5,5,1));
 
-  _prevchBN = new TGTextButton(_buttonFrame, "&Prev Channel");
+  _prevchBN = new TGTextButton(_actionFrame, "&Prev Channel");
 
-  _buttonFrame->AddFrame(_prevchBN);
+  _actionFrame->AddFrame(_prevchBN, new TGLayoutHints(kLHintsTop,5,5,5,1));
 
-  _nextchBN = new TGTextButton(_buttonFrame, "&Next Channel");
+  _nextchBN = new TGTextButton(_actionFrame, "&Next Channel");
 
-  _buttonFrame->AddFrame(_nextchBN);
+  _actionFrame->AddFrame(_nextchBN, new TGLayoutHints(kLHintsTop,5,5,5,1));
 
 
-  _prevenBN = new TGTextButton(_buttonFrame, "&Prev Entry");
+  _prevenBN = new TGTextButton(_actionFrame, "&Prev Entry");
 
-  _buttonFrame->AddFrame(_prevenBN);
+  _actionFrame->AddFrame(_prevenBN, new TGLayoutHints(kLHintsTop,5,5,5,1));
 
-  _nextenBN = new TGTextButton(_buttonFrame, "&Next Entry");
+  _nextenBN = new TGTextButton(_actionFrame, "&Next Entry");
  
-  _buttonFrame->AddFrame(_nextenBN);
+  _actionFrame->AddFrame(_nextenBN, new TGLayoutHints(kLHintsTop,5,5,5,1));
 
 
 
-  _goBN = new TGTextButton(_buttonFrame, "&Go");
-  _buttonFrame->AddFrame(_goBN);
+  _goBN = new TGTextButton(_actionFrame, "&Go");
+  _actionFrame->AddFrame(_goBN, new TGLayoutHints(kLHintsTop,5,5,5,1));
 
-  _stopBN = new TGTextButton(_buttonFrame, "&Stop");
-  _buttonFrame->AddFrame(_stopBN); 
+  _stopBN = new TGTextButton(_actionFrame, "&Stop");
+  _actionFrame->AddFrame(_stopBN, new TGLayoutHints(kLHintsTop,5,5,5,1)); 
 
 
-  _delayBox = new TGNumberEntry(_buttonFrame, 1000,9,999, TGNumberFormat::kNESInteger,
+  _delayBox = new TGNumberEntry(_actionFrame, 1000,9,999, TGNumberFormat::kNESInteger,
 				TGNumberFormat::kNEANonNegative,TGNumberFormat::kNELLimitMinMax,100,10000);
-  _buttonFrame->AddFrame(_delayBox); 
+  _actionFrame->AddFrame(_delayBox, new TGLayoutHints(kLHintsTop,5,5,5,1)); 
 
-  //  _slider = new TGHSlider(_buttonFrame, 0, 200, kSlider1 | kScaleBoth, 100); 
+  //  _slider = new TGHSlider(_actionFrame, 0, 200, kSlider1 | kScaleBoth, 100); 
   //  _slider->SetRange(0, 31); 
-  //  _buttonFrame->AddFrame(_slider); 
+  //  _actionFrame->AddFrame(_slider); 
 
 
+  _buttonFrame->AddFrame(_actionFrame, new TGLayoutHints(kLHintsExpandX | kLHintsTop,5,5,5,1)); 
   _FMain->AddFrame(_spectrumFrame, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY)); 
-  _FMain->AddFrame(_buttonFrame, new TGLayoutHints(kLHintsExpandX)); 
+  _FMain->AddFrame(_buttonFrame, new TGLayoutHints(kLHintsExpandX,10,10,10,1)); 
 
 
 
@@ -213,6 +309,40 @@ void waveInterface::connectButtons()  {
 
 
   _FMain->Connect("CloseWindow()", "waveInterface", this, "closeCleanup()"); 
+
+}
+
+void waveInterface::updateBoardSelection() {
+  //Note: I find this fairly hacky, it works but should get replaced 
+  _selected->SetState(kButtonUp); 
+  TGRadioButton *chosen = NULL; 
+
+  Bool_t found = false; 
+  Int_t i =0; 
+  for (i = 0; i < _boardList.GetEntries(); i++) { 
+    chosen = (TGRadioButton *) _boardList[i]; 
+    if (chosen->IsOn()) { 
+      found = true; 
+      std::cout << "You selected Board:" << chosen->GetString() << std::endl; 
+      _selected = chosen; 
+      break; 
+    }
+  }
+  if (!found)  {
+    //_selected must have been selected
+    _selected->SetState(kButtonDown); 
+  }
+  else { 
+    chosen->SetState(kButtonDown); 
+    BoardMap *m = _boards[i]; 
+    UInt_t entries = _chList.GetEntries(); 
+    std::cout << "Entries:" << entries << std::endl; 
+    if (m->chs.size() > entries) { 
+      std::cout << "Changing channel check boxes" << std::endl; 
+      _currentBoard = m->board; 
+      
+    }
+  }
 
 }
 
@@ -249,7 +379,7 @@ void waveInterface::openFileDialog() {
   TGFileDialog *fileDialog = new TGFileDialog(gClient->GetRoot(), _FMain, kFDOpen, fileInfo); 
   std::cout << "Selected file: " << fileInfo->fFilename << std::endl; 
   
-
+  
   if (fileInfo->fFilename == NULL) {
     std::cout << "File selection cancelled." << std::endl; 
     return; 
@@ -293,8 +423,25 @@ void waveInterface::updateFrame(UInt_t entry, UInt_t channel) {
 }
 
 
+void waveInterface::buildChannelBoardMap(TBEvent *evt, vector<BoardMap *> &brds) {
 
+  BoardMap *map = NULL; 
+  for (Int_t ch = 0; ch < evt->NPadeChan(); ch++) { 
+    if (map == NULL) { 
+      map = new BoardMap(); 
+      map->board = evt->GetPadeChan(ch).GetBoardID(); 
+    }
+    else if (map->board != evt->GetPadeChan(ch).GetBoardID()) {
+      brds.push_back(map); 
+      map = new BoardMap();
+      map->board = evt->GetPadeChan(ch).GetBoardID(); 
+    }
+	 
+    map->chs.push_back(ch); 
+  }
+  
 
+}
     
 
 void waveInterface::loadRootFile() { 
@@ -317,7 +464,12 @@ void waveInterface::loadRootFile() {
 
 
   std::cout << "Loading Root File" << std::endl; 
-  _f = new TFile(_filename); 
+  _f = new TFile(_filename);
+
+
+  
+  _currentBoard = -1; 
+  
 
   std::cout << "Getting events from Tree" << std::endl; 
   _event = new TBEvent(); 
@@ -331,17 +483,23 @@ void waveInterface::loadRootFile() {
 
   std::cout << "Getting test sample" << std::endl; 
   _eventTree->GetEntry(0); 
-
+    
+  
   _currentEntry = 0; 
   _currentChannel = 0; 
 
-  _padeChannel = _event->GetPadeChan(0); 
-  _padeChannel.GetHist(_waveform); 
 
+
+  _padeChannel = _event->GetPadeChan(0); 
+
+
+  _padeChannel.GetHist(_waveform); 
 
 
   _waveformCanvas->GetCanvas()->cd(); 
   std::cout << "Drawing Sample" << std::endl; 
+  addCheckBoxes(); 
+
   _waveform->Draw(); 
 
   _waveformCanvas->GetCanvas()->Modified(); 
@@ -386,6 +544,7 @@ bool waveInterface::nextEntry() {
     _currentEntry++; 
     finished = false; 
   }
+  addCheckBoxes(); 
 
   updateFrame(_currentEntry, _currentChannel); 
   return finished; 
@@ -398,6 +557,7 @@ void waveInterface::prevEntry() {
   if (_currentEntry == 0)
     return; 
   _currentEntry--; 
+  addCheckBoxes(); 
   updateFrame(_currentEntry, _currentChannel); 
   
 
