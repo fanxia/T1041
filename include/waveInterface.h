@@ -21,6 +21,7 @@
 #include "TThread.h"
 #include "TGSlider.h"
 #include "TBEvent.h"
+#include "TBits.h"
 #include <vector>
 
 
@@ -93,7 +94,7 @@ class waveInterface : public TQObject {
   //  TGHSlider *_slider; 
   TGNumberEntry *_delayBox; 
 
-  
+  TBits _selectedChannels;
 
 
   TFile *_f; 
@@ -120,7 +121,8 @@ class waveInterface : public TQObject {
   void prevEntry(); 
   void firstChannel(); 
   void updateBoardSelection(); 
-
+  void updateChannelSelection();
+  void selectChannelRow(); 
 
   void setDelay(UInt_t delay) { _delay = delay;  }
   void delayBoxUpdate();

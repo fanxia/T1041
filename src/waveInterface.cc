@@ -65,7 +65,10 @@ void *timer(void *ptr) {
     if (!interface->PlayerStatus())
       break; 
 
-    interface->nextChannel(); 
+    if (interface->nextChannel()) {
+      interface->nextEntry(); 
+      interface->firstChannel(); 
+    }
     gSystem->Sleep(interface->Delay());  
   }
   return 0; 
@@ -73,6 +76,7 @@ void *timer(void *ptr) {
 
 
 waveInterface::waveInterface(bool initialise) { 
+  _selectedChannels = 0; 
   _f = NULL; 
   _filename = "" ;
   _width = 1000; 
@@ -86,6 +90,7 @@ waveInterface::waveInterface(bool initialise) {
 }
 
 waveInterface::waveInterface(const TString &filename, bool initialise) { 
+  _selectedChannels = 0; 
   _f = NULL; 
   _filename = filename; 
   _playerStatus = false; 
@@ -110,6 +115,8 @@ waveInterface::~waveInterface() {
 
 
 void waveInterface::initWindow(UInt_t width, UInt_t height) { 
+
+
   if (width != 0 && height != 0) {
     _width = width; 
     _height = height; 
@@ -146,9 +153,10 @@ void waveInterface::addCheckBoxes() {
   //Update the board/channel map for the current event
   _boards.clear(); 
   buildChannelBoardMap(_event, _boards);
-
+  //  std::cout << _boards.size() << " Boards "<< std::endl; 
 
   if (_boardFrame != NULL) { 
+    //    std::cout << "Clearing old board frame. " << std::endl; 
     _buttonFrame->RemoveFrame(_boardAndchannelFrame); 
     delete _boardAndchannelFrame; 
     _chList.Clear(); 
@@ -163,10 +171,9 @@ void waveInterface::addCheckBoxes() {
   _boardAndchannelFrame = new TGHorizontalFrame(_buttonFrame); 
 
   _boardFrame = new TGGroupFrame(_boardAndchannelFrame, "Boards", kVerticalFrame); 
-  UInt_t i = 0; 
-  for (i = 0; i < _boards.size(); i++) { 
+  for (UInt_t i = 0; i < _boards.size(); i++) { 
     BoardMap *m = _boards[i]; 
-    std::cout << "Board ID:" << m->board << " # Chs: " << m->chs.size() << std::endl; 
+    //    std::cout << "Board ID:" << m->board << " # Chs: " << m->chs.size() << std::endl; 
     brd = new TGRadioButton(_boardFrame, TGHotString(converter.Itoa(m->board, 10))); 
     _boardList.Add(brd); 
   
@@ -175,10 +182,11 @@ void waveInterface::addCheckBoxes() {
       _selected = brd; 
       _currentBoard = 0; 
     }
-    else if (m->board == _currentBoard) { 
+    else if (m->board == _boards[_currentBoard]->board) { 
       brd->SetState(kButtonDown); 
       _selected = brd; 
       _currentBoard = i; 
+      std::cout << "Current Board: " << _boards[i]->board << std::endl; 
     }
 
     brd->Connect("Clicked()", "waveInterface", this, "updateBoardSelection()"); 
@@ -196,20 +204,31 @@ void waveInterface::addCheckBoxes() {
   
   UInt_t row = 0; 
   UInt_t check = 8; 
-  for ( i = 0; i < _boards[0]->chs.size(); i++) { 
+  for (UInt_t i = 0; i < _boards[_currentBoard]->chs.size(); i++) { 
     ch = new TGCheckButton(_channelFrame, TGHotString(converter.Itoa(i, 10))); 
+    ch->Connect("Clicked()", "waveInterface", this, "updateChannelSelection()"); 
     _channelFrame->AddFrame(ch); 
     _chList.Add(ch); 
     row++; 
-    if (row == check) { 
-      ch = new TGCheckButton(_channelFrame, TGHotString("All")); 
-      _channelFrame->AddFrame(ch); 
-      _chList.Add(ch); 
-      check += 8; 
+    // if (row == check) { 
+    //   ch = new TGCheckButton(_channelFrame, TGHotString("All")); 
+    //   ch->Connect("Clicked()", "waveInterface", this, "selectChannelRow()"); 
+    //   _channelFrame->AddFrame(ch); 
+    //   _chList.Add(ch); 
+    //   check += 8; 
+    // }
+  }
+
+  for (UInt_t i = 0; i < _chList.GetEntries(); i++) {
+    if (_selectedChannels.TestBitNumber(i)) {
+      ((TGCheckButton *) _chList[i])->SetState(kButtonDown); 
+      //      std::cout << "Selected Channel:" << i << " Pade Channel " << _boards[_currentBoard]->chs[i] << std::endl; 
     }
   }
 
-
+  if (_selectedChannels.CountBits() == 0) { 
+    _currentChannel = 0; 
+  }
   _boardAndchannelFrame->AddFrame(_boardFrame, new TGLayoutHints(kLHintsLeft | kLHintsBottom | kFixedWidth, 5,5,5,1)); 
   _boardAndchannelFrame->AddFrame(_channelFrame, new TGLayoutHints(kLHintsRight ,5,5,5,1)); 
   _buttonFrame->AddFrame(_boardAndchannelFrame, new TGLayoutHints(kLHintsExpandX, 5,5,5,1)); 
@@ -312,6 +331,39 @@ void waveInterface::connectButtons()  {
 
 }
 
+void waveInterface::selectChannelRow() { 
+  std::cout << "Currently not implemented!" << std::endl; 
+
+
+}
+
+void waveInterface::updateChannelSelection() { 
+  //Update the selected channels, I'm using an unsigned long (8 bytes) to store the 
+  // status of each channel
+
+  // The lowest order bit indicates channel 0, 7 6 5 4 3 2 1 0
+  // and goes up from there 
+  ULong64_t proto = 0; 
+  _selectedChannels.Set(64, &proto); 
+
+
+  TGRadioButton *chosen; 
+  for (UInt_t i = 0; i < _chList.GetEntries(); i++) { 
+    chosen = (TGRadioButton *) _chList[i]; 
+    if (chosen->IsOn()) { 
+      //This also needs replacing, very brittle approach to getting the channel number
+      Int_t channel = chosen->GetString().Atoi(); 
+      _selectedChannels[channel] = 1; 
+    }
+  }
+
+
+
+      
+  
+
+} 
+
 void waveInterface::updateBoardSelection() {
   //Note: I find this fairly hacky, it works but should get replaced 
   _selected->SetState(kButtonUp); 
@@ -325,6 +377,7 @@ void waveInterface::updateBoardSelection() {
       found = true; 
       std::cout << "You selected Board:" << chosen->GetString() << std::endl; 
       _selected = chosen; 
+      _currentBoard = i; 
       break; 
     }
   }
@@ -335,11 +388,13 @@ void waveInterface::updateBoardSelection() {
   else { 
     chosen->SetState(kButtonDown); 
     BoardMap *m = _boards[i]; 
+    updateFrame(_currentEntry, m->chs[_currentChannel]); 
+
     UInt_t entries = _chList.GetEntries(); 
     std::cout << "Entries:" << entries << std::endl; 
     if (m->chs.size() > entries) { 
       std::cout << "Changing channel check boxes" << std::endl; 
-      _currentBoard = m->board; 
+      _currentBoard = i; 
       
     }
   }
@@ -424,7 +479,7 @@ void waveInterface::updateFrame(UInt_t entry, UInt_t channel) {
 
 
 void waveInterface::buildChannelBoardMap(TBEvent *evt, vector<BoardMap *> &brds) {
-
+  //  std::cout << "Building Channel Board Map" << std::endl; 
   BoardMap *map = NULL; 
   for (Int_t ch = 0; ch < evt->NPadeChan(); ch++) { 
     if (map == NULL) { 
@@ -445,6 +500,7 @@ void waveInterface::buildChannelBoardMap(TBEvent *evt, vector<BoardMap *> &brds)
     
 
 void waveInterface::loadRootFile() { 
+
 
   if (_f != NULL && _f->IsZombie()) { 
     std::cout << "Closing stale root file" << std::endl; 
@@ -510,30 +566,59 @@ void waveInterface::loadRootFile() {
 
 
 void waveInterface::firstChannel() { 
-  _currentChannel = 0; 
-  updateFrame(_currentEntry, _currentChannel); 
+
+  if (_selectedChannels.CountBits() == 0) {
+    std::cout << "No channels selected." << std::endl; 
+    ((TGCheckButton *) _chList[0])->SetState(kButtonDown); 
+    _currentChannel = _boards[_currentBoard]->chs[0]; 
+  }
+  else {
+    UInt_t pos = _selectedChannels.FirstSetBit(); 
+    _currentChannel = pos; 
+    std::cout << "First Set Channel:" << pos << " In Pade: " << _boards[_currentBoard]->chs[_selectedChannels.FirstSetBit()] << std::endl; 
+  }
+  updateFrame(_currentEntry, _boards[_currentBoard]->chs[_currentChannel]); 
 }
 
 bool waveInterface::nextChannel() { 
-  bool finished = true; 
-  Int_t maxchans = _event->NPadeChan(); 
-  if (_currentChannel < maxchans) {
-    _currentChannel++; 
-    finished = false; 
-  }
 
-  updateFrame(_currentEntry, _currentChannel); 
-  return finished; 
+  BoardMap *m = (BoardMap *) _boards[_currentBoard]; 
+  Int_t maxchans =  m->chs.size(); 
+  std::cout << _currentChannel  << " /" << m->chs.size() << " Channels." << std::endl; 
+  for (Int_t i =_currentChannel+1; i < maxchans; i++) { 
+    if (_selectedChannels.TestBitNumber(i))
+      {
+	_currentChannel = i; 
+	std::cout << "Choosing channel: "  << i << std::endl; 
+	std::cout << "This channel maps to: " << m->chs[i] << std::endl; 
+
+	updateFrame(_currentEntry, m->chs[i]); 
+	return false; 
+      }
+  }
+  
+  return true; 
 }
 
 void waveInterface::prevChannel() { 
   if (_currentChannel == 0) 
     return; 
 
-  _currentChannel--; 
-  updateFrame(_currentEntry, _currentChannel); 
+  BoardMap *m = (BoardMap *) _boards[_currentBoard]; 
 
+  for (Int_t i = (_currentChannel-1); i >= 0; i--) { 
+    if (_selectedChannels.TestBitNumber(i))
+      {
+	_currentChannel = i; 
+	std::cout << "Choosing channel: "  << i << std::endl; 
+	std::cout << "This channel maps to: " << m->chs[i] << std::endl; 
+	updateFrame(_currentEntry, m->chs[i]); 
+	break; 
+      }
+  }
 }
+
+
 
 bool waveInterface::nextEntry() { 
   bool finished = true; 
@@ -544,9 +629,10 @@ bool waveInterface::nextEntry() {
     _currentEntry++; 
     finished = false; 
   }
+
+  updateFrame(_currentEntry, _boards[_currentBoard]->chs[_currentChannel]); 
   addCheckBoxes(); 
 
-  updateFrame(_currentEntry, _currentChannel); 
   return finished; 
 }
 
@@ -558,7 +644,7 @@ void waveInterface::prevEntry() {
     return; 
   _currentEntry--; 
   addCheckBoxes(); 
-  updateFrame(_currentEntry, _currentChannel); 
+  updateFrame(_currentEntry, _boards[_currentBoard]->chs[_currentChannel]); 
   
 
 }
